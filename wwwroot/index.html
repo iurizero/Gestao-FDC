@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão FDC - Food & Delivery</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .modal { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s ease; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 font-sans">
+    <div id="app" class="flex flex-col h-screen overflow-hidden">
+        <!-- Sidebar/Navbar (Desktop) -->
+        <header class="bg-red-600 text-white p-4 shadow-md flex justify-between items-center z-10">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <i class="fas fa-utensils"></i> Gestão FDC
+            </h1>
+            <nav class="hidden md:flex gap-6">
+                <a @click="currentTab = 'dashboard'" :class="tabClass('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</a>
+                <a @click="currentTab = 'pdv'" :class="tabClass('pdv')"><i class="fas fa-cash-register"></i> PDV</a>
+                <a @click="currentTab = 'pedidos'" :class="tabClass('pedidos')"><i class="fas fa-list-check"></i> Pedidos</a>
+                <a @click="currentTab = 'cardapio'" :class="tabClass('cardapio')"><i class="fas fa-book-open"></i> Cardápio</a>
+                <a @click="currentTab = 'estoque'" :class="tabClass('estoque')"><i class="fas fa-boxes-stacked"></i> Estoque</a>
+                <a @click="currentTab = 'financeiro'" :class="tabClass('financeiro')"><i class="fas fa-coins"></i> Financeiro</a>
+            </nav>
+            <div class="flex items-center gap-4">
+                <span class="text-sm hidden sm:inline"><i class="fas fa-user-circle"></i> Admin</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-y-auto p-4">
+            <!-- DASHBOARD -->
+            <section v-if="currentTab === 'dashboard'" class="max-w-6xl mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
+                        <p class="text-gray-500 text-sm font-semibold uppercase">Vendas Hoje</p>
+                        <h3 class="text-2xl font-bold">R$ {{ summary.totalRevenue.toFixed(2) }}</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                        <p class="text-gray-500 text-sm font-semibold uppercase">Pedidos Hoje</p>
+                        <h3 class="text-2xl font-bold">{{ summary.transactionsCount }}</h3>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+                        <p class="text-gray-500 text-sm font-semibold uppercase">Despesas</p>
+                        <h3 class="text-2xl font-bold">R$ {{ summary.totalExpenses.toFixed(2) }}</h3>
+                    </div>
+                </div>
+
+                <!-- Low Stock Alerts -->
+                <div v-if="lowStockItems.length > 0" class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-xl">
+                    <div class="flex items-center">
+                        <i class="fas fa-triangle-exclamation text-red-500 mr-3"></i>
+                        <h4 class="font-bold text-red-700">Alertas de Estoque Baixo</h4>
+                    </div>
+                    <ul class="mt-2 text-sm text-red-600 list-disc list-inside">
+                        <li v-for="item in lowStockItems" :key="item.id">
+                            {{ item.name }}: {{ item.stockQuantity || item.quantity }} {{ item.unit || 'un' }} restante(s)
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm">
+                    <h2 class="text-lg font-bold mb-4">Pedidos Recentes</h2>
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="border-b text-gray-400 text-sm">
+                                <th class="py-2">ID</th>
+                                <th>Tipo</th>
+                                <th>Status</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="order in orders" :key="order.id" class="border-b hover:bg-gray-50">
+                                <td class="py-3">#{{ order.id }}</td>
+                                <td>{{ getOrderTypeLabel(order.orderType) }}</td>
+                                <td>
+                                    <span :class="statusBadge(order.status)">
+                                        {{ getStatusLabel(order.status) }}
+                                    </span>
+                                </td>
+                                <td class="font-semibold">R$ {{ order.total.toFixed(2) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- PDV (Point of Sale) -->
+            <section v-if="currentTab === 'pdv'" class="flex flex-col md:flex-row gap-6 h-full overflow-hidden">
+                <!-- Products Selection -->
+                <div class="md:w-2/3 bg-white p-4 rounded-xl shadow-sm flex flex-col">
+                    <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+                        <button v-for="cat in categories" @click="selectedCategory = cat.id" 
+                            :class="cat.id === selectedCategory ? 'bg-red-600 text-white' : 'bg-gray-200'"
+                            class="px-4 py-2 rounded-full whitespace-nowrap text-sm font-medium transition">
+                            {{ cat.name }}
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto flex-1 pr-2">
+                        <div v-for="prod in filteredProducts" @click="addToCart(prod)"
+                            class="border rounded-lg p-3 hover:shadow-md cursor-pointer transition bg-gray-50 flex flex-col justify-between h-40">
+                            <h4 class="font-bold text-sm text-gray-700 line-clamp-2">{{ prod.name }}</h4>
+                            <div>
+                                <p class="text-xs text-gray-400 mb-1" v-if="prod.trackStock">Estoque: {{ prod.stockQuantity }}</p>
+                                <p class="text-red-600 font-bold">R$ {{ prod.price.toFixed(2) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shopping Cart -->
+                <div class="md:w-1/3 bg-white p-4 rounded-xl shadow-sm flex flex-col">
+                    <h2 class="text-lg font-bold mb-4 flex justify-between">
+                        Carrinho 
+                        <span class="text-gray-400 text-sm font-normal">{{ cart.length }} itens</span>
+                    </h2>
+                    <div class="flex-1 overflow-y-auto mb-4 pr-2">
+                        <div v-if="cart.length === 0" class="text-center text-gray-400 mt-10">
+                            <i class="fas fa-shopping-cart text-4xl mb-2"></i>
+                            <p>Carrinho vazio</p>
+                        </div>
+                        <div v-for="(item, index) in cart" :key="index" class="flex justify-between items-center mb-3 pb-2 border-b">
+                            <div>
+                                <p class="font-bold text-sm">{{ item.name }}</p>
+                                <p class="text-xs text-gray-500">{{ item.quantity }}x R$ {{ item.price.toFixed(2) }}</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @click="removeFromCart(index)" class="text-red-500"><i class="fas fa-minus-circle"></i></button>
+                                <span class="font-bold">R$ {{ (item.quantity * item.price).toFixed(2) }}</span>
+                                <button @click="addToCart(item)" class="text-green-500"><i class="fas fa-plus-circle"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-t pt-4">
+                        <div class="flex justify-between text-xl font-bold mb-4">
+                            <span>Total</span>
+                            <span class="text-red-600">R$ {{ cartTotal.toFixed(2) }}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button @click="finishOrder(1)" class="bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">BALCÃO</button>
+                            <button @click="finishOrder(3)" class="bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700">DELIVERY</button>
+                        </div>
+                        <button @click="finishOrder(2)" class="w-full mt-2 bg-gray-800 text-white py-3 rounded-lg font-bold hover:bg-gray-900">MESA</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CARDÁPIO (Menu Management) -->
+            <section v-if="currentTab === 'cardapio'" class="max-w-6xl mx-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Gestão de Cardápio</h2>
+                    <div class="flex gap-2">
+                        <button @click="showModal('category')" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold">Nova Categoria</button>
+                        <button @click="showModal('product')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Novo Prato/Produto</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50">
+                            <tr class="text-gray-500 text-sm">
+                                <th class="p-4">Nome</th>
+                                <th>Categoria</th>
+                                <th>Preço</th>
+                                <th>Estoque</th>
+                                <th class="text-right p-4">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="prod in products" :key="prod.id" class="border-b hover:bg-gray-50">
+                                <td class="p-4 font-bold">{{ prod.name }}</td>
+                                <td>{{ categories.find(c => c.id === prod.categoryId)?.name }}</td>
+                                <td class="text-red-600 font-bold">R$ {{ prod.price.toFixed(2) }}</td>
+                                <td>
+                                    <span v-if="prod.trackStock" :class="prod.stockQuantity <= 5 ? 'text-red-500 font-bold' : ''">
+                                        {{ prod.stockQuantity }}
+                                    </span>
+                                    <span v-else class="text-gray-400">-</span>
+                                </td>
+                                <td class="text-right p-4">
+                                    <button @click="editProduct(prod)" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button>
+                                    <button @click="deleteProduct(prod.id)" class="text-red-600"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ESTOQUE (Inventory Management) -->
+            <section v-if="currentTab === 'estoque'" class="max-w-6xl mx-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Gestão de Estoque (Insumos)</h2>
+                    <button @click="showModal('inventory')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Novo Insumo</button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50">
+                            <tr class="text-gray-500 text-sm">
+                                <th class="p-4">Nome</th>
+                                <th>Quantidade</th>
+                                <th>Unidade</th>
+                                <th>Custo Unit.</th>
+                                <th>Min. Alerta</th>
+                                <th class="text-right p-4">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in inventoryItems" :key="item.id" class="border-b hover:bg-gray-50">
+                                <td class="p-4 font-bold">{{ item.name }}</td>
+                                <td :class="item.quantity <= item.minQuantity ? 'text-red-500 font-bold' : ''">
+                                    {{ item.quantity }}
+                                </td>
+                                <td>{{ item.unit }}</td>
+                                <td>R$ {{ item.unitCost.toFixed(2) }}</td>
+                                <td>{{ item.minQuantity }}</td>
+                                <td class="text-right p-4">
+                                    <button @click="editInventory(item)" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button>
+                                    <button @click="deleteInventory(item.id)" class="text-red-600"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Placeholder for other tabs -->
+            <section v-if="['pedidos', 'financeiro'].includes(currentTab)" class="text-center py-20">
+                <i class="fas fa-tools text-6xl text-gray-300 mb-4"></i>
+                <h2 class="text-2xl font-bold text-gray-500">Módulo em desenvolvimento</h2>
+                <p class="text-gray-400">Em breve você poderá gerenciar {{ currentTab }} aqui.</p>
+            </section>
+        </main>
+
+        <!-- Modals -->
+        <div v-if="activeModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="modal-content bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold">{{ modalTitle }}</h3>
+                    <button @click="activeModal = null" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+                </div>
+
+                <!-- Product Form -->
+                <form v-if="activeModal === 'product'" @submit.prevent="saveProduct">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-1">Nome do Prato/Produto</label>
+                            <input v-model="formProduct.name" type="text" class="w-full border rounded-lg p-2" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-1">Categoria</label>
+                                <select v-model="formProduct.categoryId" class="w-full border rounded-lg p-2" required>
+                                    <option v-for="cat in categories.filter(c => c.id !== 0)" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-1">Preço (R$)</label>
+                                <input v-model="formProduct.price" type="number" step="0.01" class="w-full border rounded-lg p-2" required>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input v-model="formProduct.trackStock" type="checkbox" id="trackStock">
+                            <label for="trackStock" class="text-sm font-bold">Gerenciar estoque deste produto</label>
+                        </div>
+                        <div v-if="formProduct.trackStock">
+                            <label class="block text-sm font-bold mb-1">Quantidade Atual</label>
+                            <input v-model="formProduct.stockQuantity" type="number" class="w-full border rounded-lg p-2">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full mt-6 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition">Salvar Produto</button>
+                </form>
+
+                <!-- Inventory Form -->
+                <form v-if="activeModal === 'inventory'" @submit.prevent="saveInventory">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-1">Nome do Insumo (ex: Farinha, Carne)</label>
+                            <input v-model="formInventory.name" type="text" class="w-full border rounded-lg p-2" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-1">Quantidade</label>
+                                <input v-model="formInventory.quantity" type="number" step="0.01" class="w-full border rounded-lg p-2" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-1">Unidade (kg, l, un)</label>
+                                <input v-model="formInventory.unit" type="text" class="w-full border rounded-lg p-2" required>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-1">Custo Unitário</label>
+                                <input v-model="formInventory.unitCost" type="number" step="0.01" class="w-full border rounded-lg p-2" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-1">Alerta Mínimo</label>
+                                <input v-model="formInventory.minQuantity" type="number" step="0.01" class="w-full border rounded-lg p-2" required>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full mt-6 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition">Salvar no Estoque</button>
+                </form>
+
+                <!-- Category Form -->
+                <form v-if="activeModal === 'category'" @submit.prevent="saveCategory">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-1">Nome da Categoria</label>
+                            <input v-model="formCategory.name" type="text" class="w-full border rounded-lg p-2" required placeholder="Ex: Bebidas, Salgados, Pizzas">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1">Descrição</label>
+                            <input v-model="formCategory.description" type="text" class="w-full border rounded-lg p-2">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full mt-6 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition">Salvar Categoria</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bottom Navbar (Mobile) -->
+        <nav class="md:hidden bg-white border-t flex justify-around p-2">
+            <a @click="currentTab = 'dashboard'" :class="mobileTabClass('dashboard')"><i class="fas fa-chart-line"></i></a>
+            <a @click="currentTab = 'pdv'" :class="mobileTabClass('pdv')"><i class="fas fa-cash-register"></i></a>
+            <a @click="currentTab = 'pedidos'" :class="mobileTabClass('pedidos')"><i class="fas fa-list-check"></i></a>
+            <a @click="currentTab = 'cardapio'" :class="mobileTabClass('cardapio')"><i class="fas fa-book-open"></i></a>
+        </nav>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, computed, reactive } = Vue;
+
+        createApp({
+            setup() {
+                const currentTab = ref('dashboard');
+                const categories = ref([{ id: 0, name: 'Todos' }]);
+                const products = ref([]);
+                const inventoryItems = ref([]);
+                const orders = ref([]);
+                const summary = ref({ totalRevenue: 0, totalExpenses: 0, transactionsCount: 0 });
+                const selectedCategory = ref(0);
+                const cart = ref([]);
+
+                // Modal state
+                const activeModal = ref(null);
+                const modalTitle = ref('');
+                const formProduct = reactive({ id: null, name: '', price: 0, categoryId: null, trackStock: false, stockQuantity: 0 });
+                const formCategory = reactive({ id: null, name: '', description: '' });
+                const formInventory = reactive({ id: null, name: '', quantity: 0, unit: 'kg', unitCost: 0, minQuantity: 0 });
+
+                const fetchData = async () => {
+                    try {
+                        const [resProd, resCat, resOrders, resSum, resInv] = await Promise.all([
+                            fetch('/api/products').then(r => r.json()),
+                            fetch('/api/categories').then(r => r.json()),
+                            fetch('/api/orders').then(r => r.json()),
+                            fetch('/api/financial/summary').then(r => r.json()),
+                            fetch('/api/inventory').then(r => r.json())
+                        ]);
+                        products.value = resProd;
+                        categories.value = [{ id: 0, name: 'Todos' }, ...resCat];
+                        orders.value = resOrders.sort((a,b) => b.id - a.id).slice(0, 10);
+                        summary.value = resSum;
+                        inventoryItems.value = resInv;
+                    } catch (e) {
+                        console.error('Erro ao carregar dados', e);
+                    }
+                };
+
+                onMounted(fetchData);
+
+                const filteredProducts = computed(() => {
+                    if (selectedCategory.value === 0) return products.value;
+                    return products.value.filter(p => p.categoryId === selectedCategory.value);
+                });
+
+                const cartTotal = computed(() => {
+                    return cart.value.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+                });
+
+                const lowStockItems = computed(() => {
+                    const lowProds = products.value.filter(p => p.trackStock && p.stockQuantity <= 5);
+                    const lowInv = inventoryItems.value.filter(i => i.quantity <= i.minQuantity);
+                    return [...lowProds, ...lowInv];
+                });
+
+                const addToCart = (product) => {
+                    const existing = cart.value.find(i => i.productId === product.id);
+                    if (existing) {
+                        existing.quantity++;
+                    } else {
+                        cart.value.push({
+                            productId: product.id,
+                            name: product.name,
+                            price: product.price,
+                            quantity: 1
+                        });
+                    }
+                };
+
+                const removeFromCart = (index) => {
+                    if (cart.value[index].quantity > 1) {
+                        cart.value[index].quantity--;
+                    } else {
+                        cart.value.splice(index, 1);
+                    }
+                };
+
+                const finishOrder = async (type) => {
+                    if (cart.value.length === 0) return alert('Carrinho vazio!');
+                    
+                    const order = {
+                        orderType: type,
+                        items: cart.value.map(i => ({
+                            productId: i.productId,
+                            quantity: i.quantity,
+                            unitPrice: i.price
+                        }))
+                    };
+
+                    try {
+                        const res = await fetch('/api/orders', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(order)
+                        });
+                        if (res.ok) {
+                            alert('Pedido realizado com sucesso!');
+                            cart.value = [];
+                            currentTab.value = 'dashboard';
+                            fetchData();
+                        }
+                    } catch (e) {
+                        alert('Erro ao finalizar pedido');
+                    }
+                };
+
+                // CRUD Functions
+                const showModal = (type) => {
+                    activeModal.value = type;
+                    if (type === 'product') {
+                        modalTitle.value = 'Novo Produto';
+                        Object.assign(formProduct, { id: null, name: '', price: 0, categoryId: categories.value[1]?.id, trackStock: false, stockQuantity: 0 });
+                    } else if (type === 'category') {
+                        modalTitle.value = 'Nova Categoria';
+                        Object.assign(formCategory, { id: null, name: '', description: '' });
+                    } else if (type === 'inventory') {
+                        modalTitle.value = 'Novo Insumo';
+                        Object.assign(formInventory, { id: null, name: '', quantity: 0, unit: 'kg', unitCost: 0, minQuantity: 0 });
+                    }
+                };
+
+                const saveProduct = async () => {
+                    const method = formProduct.id ? 'PUT' : 'POST';
+                    const url = formProduct.id ? `/api/products/${formProduct.id}` : '/api/products';
+                    await fetch(url, {
+                        method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formProduct)
+                    });
+                    activeModal.value = null;
+                    fetchData();
+                };
+
+                const saveCategory = async () => {
+                    await fetch('/api/categories', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formCategory)
+                    });
+                    activeModal.value = null;
+                    fetchData();
+                };
+
+                const saveInventory = async () => {
+                    const method = formInventory.id ? 'PUT' : 'POST';
+                    const url = formInventory.id ? `/api/inventory/${formInventory.id}` : '/api/inventory';
+                    await fetch(url, {
+                        method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formInventory)
+                    });
+                    activeModal.value = null;
+                    fetchData();
+                };
+
+                const deleteProduct = async (id) => {
+                    if (confirm('Excluir este produto?')) {
+                        await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                        fetchData();
+                    }
+                };
+
+                const deleteInventory = async (id) => {
+                    if (confirm('Excluir este insumo?')) {
+                        await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
+                        fetchData();
+                    }
+                };
+
+                const getStatusLabel = (s) => ['Pendente', 'Preparando', 'Pronto', 'Entregue', 'Cancelado'][s-1];
+                const getOrderTypeLabel = (t) => ['Balcão', 'Mesa', 'Delivery'][t-1];
+                
+                const statusBadge = (s) => {
+                    const base = "px-2 py-1 rounded-full text-xs font-bold ";
+                    if (s === 1) return base + "bg-yellow-100 text-yellow-700";
+                    if (s === 2) return base + "bg-blue-100 text-blue-700";
+                    if (s === 3) return base + "bg-purple-100 text-purple-700";
+                    if (s === 4) return base + "bg-green-100 text-green-700";
+                    return base + "bg-red-100 text-red-700";
+                };
+
+                const tabClass = (tab) => `cursor-pointer hover:text-red-200 transition ${currentTab.value === tab ? 'border-b-2 border-white pb-1 font-bold' : ''}`;
+                const mobileTabClass = (tab) => `flex-1 text-center py-2 ${currentTab.value === tab ? 'text-red-600' : 'text-gray-400'}`;
+
+                return {
+                    currentTab, categories, products, inventoryItems, orders, summary, selectedCategory,
+                    filteredProducts, cart, cartTotal, lowStockItems, addToCart, removeFromCart,
+                    finishOrder, getStatusLabel, getOrderTypeLabel, statusBadge,
+                    tabClass, mobileTabClass,
+                    activeModal, modalTitle, formProduct, formCategory, formInventory,
+                    showModal, saveProduct, saveCategory, saveInventory, deleteProduct, deleteInventory
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
