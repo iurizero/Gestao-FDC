@@ -1,4 +1,6 @@
 using Gestao_FDC.Models;
+using Gestao_FDC.Models.Enums;
+using Microsoft.AspNetCore.Identity;
 
 namespace Gestao_FDC.Data;
 
@@ -6,6 +8,8 @@ public static class DataSeeder
 {
     public static void Seed(AppDbContext context)
     {
+        SeedDefaultAdmin(context);
+
         if (context.Categories.Any()) return;
 
         var categories = new List<Category>
@@ -43,5 +47,27 @@ public static class DataSeeder
             context.InventoryItems.AddRange(inventory);
             context.SaveChanges();
         }
+    }
+
+    private static void SeedDefaultAdmin(AppDbContext context)
+    {
+        if (context.Users.Any())
+        {
+            return;
+        }
+
+        var admin = new User
+        {
+            Username = "admin",
+            FullName = "Administrador",
+            Role = UserRole.Admin,
+            IsActive = true
+        };
+
+        var passwordHasher = new PasswordHasher<User>();
+        admin.PasswordHash = passwordHasher.HashPassword(admin, "Admin@123");
+
+        context.Users.Add(admin);
+        context.SaveChanges();
     }
 }

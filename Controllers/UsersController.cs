@@ -1,28 +1,49 @@
+using Gestao_FDC.DTOs.Auth;
 using Gestao_FDC.Interfaces;
-using Gestao_FDC.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Gestao_FDC.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin")]
 public class UsersController : ControllerBase
 {
-    private readonly IRepository<User> _repository;
+    private readonly IRepository<Gestao_FDC.Models.User> _repository;
+    private readonly IAuthService _authService;
 
-    public UsersController(IRepository<User> repository)
+    public UsersController(IRepository<Gestao_FDC.Models.User> repository, IAuthService authService)
     {
         _repository = repository;
+        _authService = authService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<User>>> GetAll() => Ok(await _repository.GetAllAsync());
+    public async Task<ActionResult<IEnumerable<UserResponse>>> GetAll()
+    {
+        var users = await _repository.GetAllAsync();
+        return Ok(users.Select(user => new UserResponse
+        {
+            Id = user.Id,
+            Username = user.Username,
+            FullName = user.FullName,
+            Role = user.Role,
+            IsActive = user.IsActive
+        }));
+    }
 
     [HttpPost]
-    public async Task<ActionResult<User>> Create(User user)
+    public async Task<ActionResult<UserResponse>> Create(RegisterUserRequest request)
     {
-        // Nota: Em um sistema real, aqui teríamos hashing de senha
-        await _repository.AddAsync(user);
-        return Ok(user);
+        try
+        {
+            var user = await _authService.RegisterAsync(request);
+            return CreatedAtAction(nameof(GetAll), new { id = user.Id }, user);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }

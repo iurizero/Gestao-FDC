@@ -1,10 +1,12 @@
 using Gestao_FDC.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Gestao_FDC.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin,Gerente")]
 public class FinancialController : ControllerBase
 {
     private readonly IFinancialService _financialService;

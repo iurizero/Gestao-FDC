@@ -1,5 +1,6 @@
 using Gestao_FDC.Interfaces;
 using Gestao_FDC.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Gestao_FDC.Controllers;
@@ -15,9 +16,11 @@ public class ProductsController : ControllerBase
         _repository = repository;
     }
 
+    [AllowAnonymous]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Product>>> GetAll() => Ok(await _repository.GetAllAsync());
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<ActionResult<Product>> GetById(int id)
     {
@@ -26,6 +29,7 @@ public class ProductsController : ControllerBase
         return Ok(product);
     }
 
+    [Authorize(Roles = "Admin,Gerente")]
     [HttpPost]
     public async Task<ActionResult<Product>> Create(Product product)
     {
@@ -33,6 +37,7 @@ public class ProductsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = product.Id }, product);
     }
 
+    [Authorize(Roles = "Admin,Gerente")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Product product)
     {
@@ -41,6 +46,7 @@ public class ProductsController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = "Admin,Gerente")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

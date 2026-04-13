@@ -1,5 +1,6 @@
 using Gestao_FDC.Interfaces;
 using Gestao_FDC.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Gestao_FDC.Controllers;
@@ -15,6 +16,7 @@ public class SalgadosController : ControllerBase
         _repository = repository;
     }
 
+    [AllowAnonymous]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Salgado>>> GetAll()
     {
@@ -22,6 +24,7 @@ public class SalgadosController : ControllerBase
         return Ok(salgados);
     }
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<ActionResult<Salgado>> GetById(int id)
     {
@@ -30,6 +33,7 @@ public class SalgadosController : ControllerBase
         return Ok(salgado);
     }
 
+    [Authorize(Roles = "Admin,Gerente")]
     [HttpPost]
     public async Task<ActionResult<Salgado>> Create(Salgado salgado)
     {
@@ -37,6 +41,7 @@ public class SalgadosController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = salgado.Id }, salgado);
     }
 
+    [Authorize(Roles = "Admin,Gerente")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Salgado salgado)
     {
@@ -45,6 +50,7 @@ public class SalgadosController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = "Admin,Gerente")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

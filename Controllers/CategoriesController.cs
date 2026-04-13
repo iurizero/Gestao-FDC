@@ -1,5 +1,6 @@
 using Gestao_FDC.Interfaces;
 using Gestao_FDC.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Gestao_FDC.Controllers;
@@ -15,9 +16,11 @@ public class CategoriesController : ControllerBase
         _repository = repository;
     }
 
+    [AllowAnonymous]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Category>>> GetAll() => Ok(await _repository.GetAllAsync());
 
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<ActionResult<Category>> GetById(int id)
     {
@@ -26,6 +29,7 @@ public class CategoriesController : ControllerBase
         return Ok(category);
     }
 
+    [Authorize(Roles = "Admin,Gerente")]
     [HttpPost]
     public async Task<ActionResult<Category>> Create(Category category)
     {
@@ -33,6 +37,7 @@ public class CategoriesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = category.Id }, category);
     }
 
+    [Authorize(Roles = "Admin,Gerente")]
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, Category category)
     {
@@ -41,6 +46,7 @@ public class CategoriesController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = "Admin,Gerente")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

@@ -1,11 +1,13 @@
 using Gestao_FDC.Interfaces;
 using Gestao_FDC.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Gestao_FDC.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class CustomersController : ControllerBase
 {
     private readonly IRepository<Customer> _repository;

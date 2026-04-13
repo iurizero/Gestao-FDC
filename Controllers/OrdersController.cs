@@ -1,12 +1,14 @@
 using Gestao_FDC.Interfaces;
 using Gestao_FDC.Models;
 using Gestao_FDC.Models.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Gestao_FDC.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _orderService;
