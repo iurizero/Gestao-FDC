@@ -30,8 +30,15 @@ public class OrdersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Order>> Create(Order order)
     {
-        var createdOrder = await _orderService.CreateOrderAsync(order);
-        return CreatedAtAction(nameof(GetById), new { id = createdOrder.Id }, createdOrder);
+        try
+        {
+            var createdOrder = await _orderService.CreateOrderAsync(order);
+            return CreatedAtAction(nameof(GetById), new { id = createdOrder.Id }, createdOrder);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     [HttpPatch("{id}/status")]

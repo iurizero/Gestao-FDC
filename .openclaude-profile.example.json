@@ -1,0 +1,9 @@
+{
+  "profile": "openai",
+  "env": {
+    "OPENAI_BASE_URL": "https://openrouter.ai/api/v1",
+    "OPENAI_MODEL": "openai/gpt-oss-120b:free",
+    "OPENAI_API_KEY": "set-via-local-env-or-untracked-file"
+  },
+  "createdAt": "2026-04-10T19:30:36.978Z"
+}

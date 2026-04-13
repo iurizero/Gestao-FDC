@@ -1,3 +1,4 @@
+using Gestao_FDC.Data;
 using Gestao_FDC.Interfaces;
 using Gestao_FDC.Models;
 using Gestao_FDC.Models.Enums;
@@ -9,17 +10,20 @@ namespace Gestao_FDC.Services;
 
 public class OrderService : IOrderService
 {
+    private readonly AppDbContext _context;
     private readonly IRepository<Order> _orderRepo;
     private readonly IRepository<Product> _productRepo;
     private readonly IRepository<FinancialTransaction> _transactionRepo;
     private readonly IRepository<Customer> _customerRepo;
 
     public OrderService(
+        AppDbContext context,
         IRepository<Order> orderRepo,
         IRepository<Product> productRepo,
         IRepository<FinancialTransaction> transactionRepo,
         IRepository<Customer> customerRepo)
     {
+        _context = context;
         _orderRepo = orderRepo;
         _productRepo = productRepo;
         _transactionRepo = transactionRepo;
@@ -28,20 +32,39 @@ public class OrderService : IOrderService
 
     public async Task<Order> CreateOrderAsync(Order order)
     {
+        if (order.Items == null || order.Items.Count == 0)
+        {
+            throw new InvalidOperationException("O pedido deve conter ao menos um item.");
+        }
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+
         decimal total = 0;
         foreach (var item in order.Items)
         {
-            var product = await _productRepo.GetByIdAsync(item.ProductId);
-            if (product != null)
+            if (item.Quantity <= 0)
             {
-                item.UnitPrice = product.Price;
-                total += item.Quantity * product.Price;
+                throw new InvalidOperationException("A quantidade dos itens deve ser maior que zero.");
+            }
 
-                if (product.TrackStock)
+            var product = await _productRepo.GetByIdAsync(item.ProductId);
+            if (product == null)
+            {
+                throw new InvalidOperationException($"Produto {item.ProductId} nao encontrado.");
+            }
+
+            item.UnitPrice = product.Price;
+            total += item.Quantity * product.Price;
+
+            if (product.TrackStock)
+            {
+                if (product.StockQuantity < item.Quantity)
                 {
-                    product.StockQuantity -= item.Quantity;
-                    await _productRepo.UpdateAsync(product);
+                    throw new InvalidOperationException($"Estoque insuficiente para o produto '{product.Name}'.");
                 }
+
+                product.StockQuantity -= item.Quantity;
+                await _productRepo.UpdateAsync(product);
             }
         }
 
@@ -67,17 +90,30 @@ public class OrderService : IOrderService
             }
         }
 
+        await transaction.CommitAsync();
         return order;
     }
 
-    public async Task<Order?> GetOrderByIdAsync(int id) => await _orderRepo.GetByIdAsync(id);
+    public async Task<Order?> GetOrderByIdAsync(int id) =>
+        await _context.Orders
+            .Include(o => o.Customer)
+            .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+            .FirstOrDefaultAsync(o => o.Id == id);
 
-    public async Task<IEnumerable<Order>> GetAllOrdersAsync() => await _orderRepo.GetAllAsync();
+    public async Task<IEnumerable<Order>> GetAllOrdersAsync() =>
+        await _context.Orders
+            .Include(o => o.Customer)
+            .Include(o => o.Items)
+                .ThenInclude(i => i.Product)
+            .ToListAsync();
 
     public async Task<bool> UpdateOrderStatusAsync(int orderId, OrderStatus status)
     {
-        var order = await _orderRepo.GetByIdAsync(orderId);
+        var order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
         if (order == null) return false;
+
+        if (order.Status == status) return true;
 
         order.Status = status;
         await _orderRepo.UpdateAsync(order);
@@ -125,6 +161,14 @@ public class OrderService : IOrderService
 
     private async Task CreateFinancialTransaction(Order order)
     {
+        var transactionExists = await _context.FinancialTransactions
+            .AnyAsync(t => t.OrderId == order.Id && t.Type == TransactionType.Receita);
+
+        if (transactionExists)
+        {
+            return;
+        }
+
         var transaction = new FinancialTransaction
         {
             Amount = order.Total,

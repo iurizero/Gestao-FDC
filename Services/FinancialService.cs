@@ -1,3 +1,4 @@
+using Gestao_FDC.Data;
 using Gestao_FDC.Interfaces;
 using Gestao_FDC.Models;
 using Gestao_FDC.Models.Enums;
@@ -7,33 +8,33 @@ namespace Gestao_FDC.Services;
 
 public class FinancialService : IFinancialService
 {
-    private readonly IRepository<FinancialTransaction> _transactionRepo;
+    private readonly AppDbContext _context;
 
-    public FinancialService(IRepository<FinancialTransaction> transactionRepo)
+    public FinancialService(AppDbContext context)
     {
-        _transactionRepo = transactionRepo;
+        _context = context;
     }
 
     public async Task<decimal> GetDailyRevenueAsync(DateTime date)
-    {
-        var transactions = await _transactionRepo.GetAllAsync();
-        return transactions
+        => (await _context.FinancialTransactions
             .Where(t => t.TransactionDate.Date == date.Date && t.Type == TransactionType.Receita)
-            .Sum(t => t.Amount);
-    }
+            .SumAsync(t => (decimal?)t.Amount)) ?? 0m;
 
     public async Task<decimal> GetMonthlyRevenueAsync(int month, int year)
-    {
-        var transactions = await _transactionRepo.GetAllAsync();
-        return transactions
+        => (await _context.FinancialTransactions
             .Where(t => t.TransactionDate.Month == month && t.TransactionDate.Year == year && t.Type == TransactionType.Receita)
-            .Sum(t => t.Amount);
-    }
+            .SumAsync(t => (decimal?)t.Amount)) ?? 0m;
+
+    public async Task<decimal> GetMonthlyExpensesAsync(int month, int year)
+        => (await _context.FinancialTransactions
+            .Where(t => t.TransactionDate.Month == month && t.TransactionDate.Year == year && t.Type == TransactionType.Despesa)
+            .SumAsync(t => (decimal?)t.Amount)) ?? 0m;
 
     public async Task<object> GetFinancialSummaryAsync(DateTime start, DateTime end)
     {
-        var transactions = await _transactionRepo.GetAllAsync();
-        var periodTransactions = transactions.Where(t => t.TransactionDate >= start && t.TransactionDate <= end).ToList();
+        var periodTransactions = await _context.FinancialTransactions
+            .Where(t => t.TransactionDate >= start && t.TransactionDate <= end)
+            .ToListAsync();
 
         var totalRevenue = periodTransactions.Where(t => t.Type == TransactionType.Receita).Sum(t => t.Amount);
         var totalExpenses = periodTransactions.Where(t => t.Type == TransactionType.Despesa).Sum(t => t.Amount);
