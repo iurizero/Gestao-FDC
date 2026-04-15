@@ -151,4 +151,15 @@
 /Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/runtimes/win-x64/native/e_sqlite3.dll
 /Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/runtimes/win-x86/native/e_sqlite3.dll
 /Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/Gestao-FDC.staticwebassets.runtime.json
-/Users/iury0/GitHub/Gestao-FDC/obj/Debug/net10.0/compressed/plwo2vvu7q-{0}-ygt5fanfzc-ygt5fanfzc.gz
+/Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/.openclaude-profile.example.json
+/Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/.openclaude-profile.json
+/Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
+/Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/Microsoft.IdentityModel.Abstractions.dll
+/Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/Microsoft.IdentityModel.JsonWebTokens.dll
+/Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/Microsoft.IdentityModel.Logging.dll
+/Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/Microsoft.IdentityModel.Protocols.dll
+/Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+/Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/Microsoft.IdentityModel.Tokens.dll
+/Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/System.IdentityModel.Tokens.Jwt.dll
+/Users/iury0/GitHub/Gestao-FDC/bin/Debug/net10.0/docs/postman/Gestao-FDC.postman_collection.json
+/Users/iury0/GitHub/Gestao-FDC/obj/Debug/net10.0/compressed/plwo2vvu7q-{0}-zgqg7o6b2y-zgqg7o6b2y.gz

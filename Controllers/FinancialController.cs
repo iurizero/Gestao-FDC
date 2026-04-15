@@ -1,4 +1,6 @@
+using Gestao_FDC.DTOs.Financial;
 using Gestao_FDC.Interfaces;
+using Gestao_FDC.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,14 +8,38 @@ namespace Gestao_FDC.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin,Gerente")]
+[AllowAnonymous]
 public class FinancialController : ControllerBase
 {
     private readonly IFinancialService _financialService;
+    private readonly IRepository<FinancialTransaction> _repository;
 
-    public FinancialController(IFinancialService financialService)
+    public FinancialController(
+        IFinancialService financialService,
+        IRepository<FinancialTransaction> repository)
     {
         _financialService = financialService;
+        _repository = repository;
+    }
+
+    [HttpGet("transactions")]
+    public async Task<ActionResult<IEnumerable<FinancialTransaction>>> GetTransactions()
+        => Ok(await _repository.GetAllAsync());
+
+    [HttpPost("transactions")]
+    public async Task<ActionResult<FinancialTransaction>> CreateTransaction(CreateFinancialTransactionRequest request)
+    {
+        var transaction = new FinancialTransaction
+        {
+            Amount = request.Amount,
+            Type = request.Type,
+            Description = request.Description.Trim(),
+            Category = request.Category?.Trim(),
+            TransactionDate = request.TransactionDate ?? DateTime.Now
+        };
+
+        await _repository.AddAsync(transaction);
+        return CreatedAtAction(nameof(GetTransactions), new { id = transaction.Id }, transaction);
     }
 
     [HttpGet("summary")]

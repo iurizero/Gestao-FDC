@@ -1,3 +1,4 @@
+using Gestao_FDC.DTOs.Inventory;
 using Gestao_FDC.Interfaces;
 using Gestao_FDC.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,7 @@ namespace Gestao_FDC.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[AllowAnonymous]
 public class InventoryController : ControllerBase
 {
     private readonly IRepository<InventoryItem> _repository;
@@ -29,16 +30,40 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<InventoryItem>> Create(InventoryItem item)
+    public async Task<ActionResult<InventoryItem>> Create(InventoryItemRequest request)
     {
-        await _repository.AddAsync(item);
-        return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);
+        try
+        {
+            var item = new InventoryItem
+            {
+                Name = request.Name.Trim(),
+                Quantity = request.Quantity,
+                Unit = request.Unit.Trim(),
+                MinQuantity = request.MinQuantity,
+                UnitCost = request.UnitCost
+            };
+
+            await _repository.AddAsync(item);
+            
+            return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Erro interno: {ex.Message}");
+        }
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, InventoryItem item)
+    public async Task<IActionResult> Update(int id, InventoryItemRequest request)
     {
-        if (id != item.Id) return BadRequest();
+        var item = await _repository.GetByIdAsync(id);
+        if (item == null) return NotFound();
+
+        item.Name = request.Name.Trim();
+        item.Quantity = request.Quantity;
+        item.Unit = request.Unit.Trim();
+        item.MinQuantity = request.MinQuantity;
+        item.UnitCost = request.UnitCost;
         await _repository.UpdateAsync(item);
         return NoContent();
     }

@@ -153,43 +153,62 @@
 
             <!-- CARDÁPIO (Menu Management) -->
             <section v-if="currentTab === 'cardapio'" class="max-w-6xl mx-auto">
-                <div class="flex justify-between items-center mb-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h2 class="text-2xl font-bold">Gestão de Cardápio</h2>
-                    <div class="flex gap-2">
-                        <button @click="showModal('category')" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold">Nova Categoria</button>
-                        <button @click="showModal('product')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Novo Prato/Produto</button>
+                    <div class="flex flex-wrap gap-2">
+                        <button @click="showModal('category')" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                            <i class="fas fa-folder-plus"></i> Nova Categoria
+                        </button>
+                        <button @click="showModal('product')" class="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                            <i class="fas fa-plus"></i> Novo Prato/Produto
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Categorias chips for quick edit/delete -->
+                <div class="mb-6 flex flex-wrap gap-2">
+                    <div v-for="cat in categories.filter(c => c.id !== 0)" :key="cat.id" 
+                        class="bg-white border px-3 py-1 rounded-full flex items-center gap-2 text-sm shadow-sm">
+                        <span class="font-semibold">{{ cat.name }}</span>
+                        <button @click="editCategory(cat)" class="text-blue-500 hover:text-blue-700"><i class="fas fa-edit text-xs"></i></button>
+                        <button @click="deleteCategory(cat.id)" class="text-red-500 hover:text-red-700"><i class="fas fa-times text-xs"></i></button>
                     </div>
                 </div>
 
                 <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-gray-50">
-                            <tr class="text-gray-500 text-sm">
-                                <th class="p-4">Nome</th>
-                                <th>Categoria</th>
-                                <th>Preço</th>
-                                <th>Estoque</th>
-                                <th class="text-right p-4">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="prod in products" :key="prod.id" class="border-b hover:bg-gray-50">
-                                <td class="p-4 font-bold">{{ prod.name }}</td>
-                                <td>{{ categories.find(c => c.id === prod.categoryId)?.name }}</td>
-                                <td class="text-red-600 font-bold">R$ {{ prod.price.toFixed(2) }}</td>
-                                <td>
-                                    <span v-if="prod.trackStock" :class="prod.stockQuantity <= 5 ? 'text-red-500 font-bold' : ''">
-                                        {{ prod.stockQuantity }}
-                                    </span>
-                                    <span v-else class="text-gray-400">-</span>
-                                </td>
-                                <td class="text-right p-4">
-                                    <button @click="editProduct(prod)" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button>
-                                    <button @click="deleteProduct(prod.id)" class="text-red-600"><i class="fas fa-trash"></i></button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50">
+                                <tr class="text-gray-500 text-sm">
+                                    <th class="p-4">Nome</th>
+                                    <th>Categoria</th>
+                                    <th>Preço</th>
+                                    <th>Estoque</th>
+                                    <th class="text-right p-4">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="prod in products" :key="prod.id" class="border-b hover:bg-gray-50">
+                                    <td class="p-4 font-bold">{{ prod.name }}</td>
+                                    <td>{{ categories.find(c => c.id === prod.categoryId)?.name }}</td>
+                                    <td class="text-red-600 font-bold">R$ {{ prod.price.toFixed(2) }}</td>
+                                    <td>
+                                        <span v-if="prod.trackStock" :class="prod.stockQuantity <= 5 ? 'text-red-500 font-bold' : ''">
+                                            {{ prod.stockQuantity }}
+                                        </span>
+                                        <span v-else class="text-gray-400">-</span>
+                                    </td>
+                                    <td class="text-right p-4">
+                                        <button @click="editProduct(prod)" class="text-blue-600 mr-2"><i class="fas fa-edit"></i></button>
+                                        <button @click="deleteProduct(prod.id)" class="text-red-600"><i class="fas fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                                <tr v-if="products.length === 0">
+                                    <td colspan="5" class="p-8 text-center text-gray-400">Nenhum produto cadastrado.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
@@ -436,10 +455,13 @@
                             alert('Pedido realizado com sucesso!');
                             cart.value = [];
                             currentTab.value = 'dashboard';
-                            fetchData();
+                            await fetchData();
+                        } else {
+                            const err = await res.json();
+                            alert('Erro ao finalizar pedido:\n' + (err.message || err.title || JSON.stringify(err)));
                         }
                     } catch (e) {
-                        alert('Erro ao finalizar pedido');
+                        alert('Erro de conexão ao finalizar pedido');
                     }
                 };
 
@@ -447,54 +469,135 @@
                 const showModal = (type) => {
                     activeModal.value = type;
                     if (type === 'product') {
-                        modalTitle.value = 'Novo Produto';
-                        Object.assign(formProduct, { id: null, name: '', price: 0, categoryId: categories.value[1]?.id, trackStock: false, stockQuantity: 0 });
+                        modalTitle.value = formProduct.id ? 'Editar Produto' : 'Novo Produto';
+                        if (!formProduct.id) Object.assign(formProduct, { id: null, name: '', price: 0, categoryId: categories.value[1]?.id || 0, trackStock: false, stockQuantity: 0 });
                     } else if (type === 'category') {
-                        modalTitle.value = 'Nova Categoria';
-                        Object.assign(formCategory, { id: null, name: '', description: '' });
+                        modalTitle.value = formCategory.id ? 'Editar Categoria' : 'Nova Categoria';
+                        if (!formCategory.id) Object.assign(formCategory, { id: null, name: '', description: '' });
                     } else if (type === 'inventory') {
-                        modalTitle.value = 'Novo Insumo';
-                        Object.assign(formInventory, { id: null, name: '', quantity: 0, unit: 'kg', unitCost: 0, minQuantity: 0 });
+                        modalTitle.value = formInventory.id ? 'Editar Insumo' : 'Novo Insumo';
+                        if (!formInventory.id) Object.assign(formInventory, { id: null, name: '', quantity: 0, unit: 'kg', unitCost: 0, minQuantity: 0 });
                     }
                 };
 
+                const editProduct = (prod) => {
+                    Object.assign(formProduct, { ...prod });
+                    showModal('product');
+                };
+
+                const editCategory = (cat) => {
+                    Object.assign(formCategory, { ...cat });
+                    showModal('category');
+                };
+
+                const editInventory = (item) => {
+                    Object.assign(formInventory, { ...item });
+                    showModal('inventory');
+                };
+
                 const saveProduct = async () => {
-                    const method = formProduct.id ? 'PUT' : 'POST';
-                    const url = formProduct.id ? `/api/products/${formProduct.id}` : '/api/products';
-                    await fetch(url, {
-                        method,
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(formProduct)
-                    });
-                    activeModal.value = null;
-                    fetchData();
+                    try {
+                        const method = formProduct.id ? 'PUT' : 'POST';
+                        const url = formProduct.id ? `/api/products/${formProduct.id}` : '/api/products';
+                        
+                        // Garante que campos numéricos sejam números
+                        const data = {
+                            ...formProduct,
+                            price: Number(formProduct.price),
+                            stockQuantity: Math.floor(Number(formProduct.stockQuantity)),
+                            categoryId: Number(formProduct.categoryId)
+                        };
+
+                        const res = await fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                        if (res.ok) {
+                            activeModal.value = null;
+                            Object.assign(formProduct, { id: null, name: '', price: 0, categoryId: null, trackStock: false, stockQuantity: 0 });
+                            await fetchData();
+                        } else {
+                            const err = await res.json();
+                            let errorMsg = err.title || 'Erro desconhecido';
+                            if (err.errors) {
+                                errorMsg += '\n' + Object.entries(err.errors).map(([k, v]) => `${k}: ${v}`).join('\n');
+                            }
+                            alert('Erro ao salvar produto:\n' + errorMsg);
+                        }
+                    } catch (e) {
+                        alert('Erro de conexão ao salvar produto');
+                        console.error(e);
+                    }
                 };
 
                 const saveCategory = async () => {
-                    await fetch('/api/categories', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(formCategory)
-                    });
-                    activeModal.value = null;
-                    fetchData();
+                    try {
+                        const method = formCategory.id ? 'PUT' : 'POST';
+                        const url = formCategory.id ? `/api/categories/${formCategory.id}` : '/api/categories';
+                        const res = await fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(formCategory)
+                        });
+                        if (res.ok) {
+                            activeModal.value = null;
+                            Object.assign(formCategory, { id: null, name: '', description: '' });
+                            await fetchData();
+                        } else {
+                            const err = await res.json();
+                            alert('Erro ao salvar categoria: ' + (err.title || 'Verifique os dados'));
+                        }
+                    } catch (e) {
+                        alert('Erro de conexão ao salvar categoria');
+                    }
                 };
 
                 const saveInventory = async () => {
-                    const method = formInventory.id ? 'PUT' : 'POST';
-                    const url = formInventory.id ? `/api/inventory/${formInventory.id}` : '/api/inventory';
-                    await fetch(url, {
-                        method,
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(formInventory)
-                    });
-                    activeModal.value = null;
-                    fetchData();
+                    try {
+                        const method = formInventory.id ? 'PUT' : 'POST';
+                        const url = formInventory.id ? `/api/inventory/${formInventory.id}` : '/api/inventory';
+                        
+                        // Garante que campos numéricos sejam números
+                        const data = {
+                            ...formInventory,
+                            quantity: Number(formInventory.quantity),
+                            unitCost: Number(formInventory.unitCost),
+                            minQuantity: Number(formInventory.minQuantity)
+                        };
+
+                        const res = await fetch(url, {
+                            method,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(data)
+                        });
+                        if (res.ok) {
+                            activeModal.value = null;
+                            Object.assign(formInventory, { id: null, name: '', quantity: 0, unit: 'kg', unitCost: 0, minQuantity: 0 });
+                            await fetchData();
+                        } else {
+                            const err = await res.json();
+                            let errorMsg = err.title || 'Erro desconhecido';
+                            if (err.errors) {
+                                errorMsg += '\n' + Object.entries(err.errors).map(([k, v]) => `${k}: ${v}`).join('\n');
+                            }
+                            alert('Erro ao salvar insumo:\n' + errorMsg);
+                        }
+                    } catch (e) {
+                        alert('Erro de conexão ao salvar estoque');
+                    }
                 };
 
                 const deleteProduct = async (id) => {
                     if (confirm('Excluir este produto?')) {
                         await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                        fetchData();
+                    }
+                };
+
+                const deleteCategory = async (id) => {
+                    if (confirm('Excluir esta categoria? Isso pode afetar produtos vinculados.')) {
+                        await fetch(`/api/categories/${id}`, { method: 'DELETE' });
                         fetchData();
                     }
                 };
@@ -527,7 +630,8 @@
                     finishOrder, getStatusLabel, getOrderTypeLabel, statusBadge,
                     tabClass, mobileTabClass,
                     activeModal, modalTitle, formProduct, formCategory, formInventory,
-                    showModal, saveProduct, saveCategory, saveInventory, deleteProduct, deleteInventory
+                    showModal, saveProduct, saveCategory, saveInventory, deleteProduct, deleteInventory,
+                    editProduct, editCategory, editInventory, deleteCategory
                 };
             }
         }).mount('#app');

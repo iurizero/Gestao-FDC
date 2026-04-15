@@ -1,6 +1,84 @@
 @Gestao_FDC_HostAddress = http://localhost:5286
+@token = COLE_SEU_TOKEN_AQUI
 
-GET {{Gestao_FDC_HostAddress}}/weatherforecast/
+### Login
+POST {{Gestao_FDC_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "Admin@123"
+}
+
+### Listar categorias
+GET {{Gestao_FDC_HostAddress}}/api/categories
 Accept: application/json
 
-###
+### Listar produtos
+GET {{Gestao_FDC_HostAddress}}/api/products
+Accept: application/json
+
+### Criar cliente
+POST {{Gestao_FDC_HostAddress}}/api/customers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maria Silva",
+  "phone": "81999999999",
+  "address": "Rua das Flores, 120",
+  "email": "maria@email.com"
+}
+
+### Criar pedido delivery
+POST {{Gestao_FDC_HostAddress}}/api/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "orderType": 3,
+  "customerId": 1,
+  "notes": "Entregar sem atraso",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "notes": "Bem quente"
+    },
+    {
+      "productId": 3,
+      "quantity": 1
+    }
+  ]
+}
+
+### Atualizar status do pedido
+PATCH {{Gestao_FDC_HostAddress}}/api/orders/1/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": 4
+}
+
+### Listar transacoes financeiras
+GET {{Gestao_FDC_HostAddress}}/api/financial/transactions
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Criar despesa
+POST {{Gestao_FDC_HostAddress}}/api/financial/transactions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 125.90,
+  "type": 2,
+  "description": "Compra de insumos",
+  "category": "Insumos"
+}
+
+### Resumo financeiro
+GET {{Gestao_FDC_HostAddress}}/api/financial/summary?start=2026-04-01&end=2026-04-30
+Authorization: Bearer {{token}}
+Accept: application/json

@@ -1,3 +1,8 @@
 .openclaude-profile.json
+.DS_Store
 bin/
 obj/
+TestResults/
+*.db
+*.db-shm
+*.db-wal

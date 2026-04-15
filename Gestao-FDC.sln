@@ -4,6 +4,8 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gestao-FDC", "Gestao-FDC.csproj", "{5A96AB3F-2FDD-3B78-DC34-455FCFDC1F0E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gestao_FDC.Tests", "Tests/Gestao_FDC.Tests.csproj", "{A5B6C7D8-E9F0-4A1B-8C2D-3E4F5A6B7C8D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -14,6 +16,10 @@ Global
 		{5A96AB3F-2FDD-3B78-DC34-455FCFDC1F0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A96AB3F-2FDD-3B78-DC34-455FCFDC1F0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A96AB3F-2FDD-3B78-DC34-455FCFDC1F0E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5B6C7D8-E9F0-4A1B-8C2D-3E4F5A6B7C8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5B6C7D8-E9F0-4A1B-8C2D-3E4F5A6B7C8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5B6C7D8-E9F0-4A1B-8C2D-3E4F5A6B7C8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5B6C7D8-E9F0-4A1B-8C2D-3E4F5A6B7C8D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Gestao-FDC")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c6f67454358ce7f7c2dc0a046e7e572fe7458bba")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d4478487dc4412b18f26e2071025261282d16b5e")]
 [assembly: System.Reflection.AssemblyProductAttribute("Gestao-FDC")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Gestao-FDC")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

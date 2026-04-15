@@ -1,12 +1,20 @@
+using System.ComponentModel.DataAnnotations;
 using Gestao_FDC.Models.Enums;
 
 namespace Gestao_FDC.DTOs.Auth;
 
 public class RegisterUserRequest
 {
+    [Required]
     public string Username { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(6)]
     public string Password { get; set; } = string.Empty;
+
+    [Required]
     public string FullName { get; set; } = string.Empty;
+
     public UserRole Role { get; set; } = UserRole.Atendente;
     public bool IsActive { get; set; } = true;
 }

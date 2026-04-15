@@ -17,9 +17,6 @@ public class AppDbContext : DbContext
     public DbSet<FinancialTransaction> FinancialTransactions { get; set; }
     public DbSet<InventoryItem> InventoryItems { get; set; }
     public DbSet<User> Users { get; set; }
-    
-    // Mantendo Salgado por compatibilidade inicial, mas será migrado para Product futuramente
-    public DbSet<Salgado> Salgados { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

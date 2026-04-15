@@ -242,27 +242,6 @@ namespace Gestao_FDC.Migrations
                     b.ToTable("Products");
                 });
 
-            modelBuilder.Entity("Gestao_FDC.Models.Salgado", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("Preco")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Salgados");
-                });
-
             modelBuilder.Entity("Gestao_FDC.Models.User", b =>
                 {
                     b.Property<int>("Id")

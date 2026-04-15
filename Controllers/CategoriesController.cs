@@ -1,3 +1,4 @@
+using Gestao_FDC.DTOs.Categories;
 using Gestao_FDC.Interfaces;
 using Gestao_FDC.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -7,6 +8,7 @@ namespace Gestao_FDC.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[AllowAnonymous]
 public class CategoriesController : ControllerBase
 {
     private readonly IRepository<Category> _repository;
@@ -16,11 +18,9 @@ public class CategoriesController : ControllerBase
         _repository = repository;
     }
 
-    [AllowAnonymous]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Category>>> GetAll() => Ok(await _repository.GetAllAsync());
 
-    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<ActionResult<Category>> GetById(int id)
     {
@@ -29,24 +29,31 @@ public class CategoriesController : ControllerBase
         return Ok(category);
     }
 
-    [Authorize(Roles = "Admin,Gerente")]
     [HttpPost]
-    public async Task<ActionResult<Category>> Create(Category category)
+    public async Task<ActionResult<Category>> Create(CategoryRequest request)
     {
+        var category = new Category
+        {
+            Name = request.Name.Trim(),
+            Description = request.Description?.Trim()
+        };
+
         await _repository.AddAsync(category);
         return CreatedAtAction(nameof(GetById), new { id = category.Id }, category);
     }
 
-    [Authorize(Roles = "Admin,Gerente")]
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, Category category)
+    public async Task<IActionResult> Update(int id, CategoryRequest request)
     {
-        if (id != category.Id) return BadRequest();
+        var category = await _repository.GetByIdAsync(id);
+        if (category == null) return NotFound();
+
+        category.Name = request.Name.Trim();
+        category.Description = request.Description?.Trim();
         await _repository.UpdateAsync(category);
         return NoContent();
     }
 
-    [Authorize(Roles = "Admin,Gerente")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
